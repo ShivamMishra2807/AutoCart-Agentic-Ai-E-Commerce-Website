@@ -1,0 +1,11 @@
+/* Admin custom styles */
+.admin-sidebar-active {
+  @apply bg-indigo-600 text-white font-bold shadow-md shadow-indigo-600/20;
+}
+
+/* Readable default sizes for the admin console: nothing below 14px, body at 16px (Tailwind's xs/sm are 12/14px). */
+.admin-root { font-size: 16px; }
+.admin-root .text-xs { font-size: 14px; line-height: 1.45; }
+.admin-root .text-sm { font-size: 15.5px; line-height: 1.5; }
+.admin-root .text-\[10px\], .admin-root .text-\[11px\] { font-size: 13px; }
+.admin-root th { font-size: 13px; }

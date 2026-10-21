@@ -1,0 +1,34 @@
+/* 3D depth and motion for the storefront. Everything here respects prefers-reduced-motion (see the bottom). */
+
+/* ---------- Depth on cards, buttons and spotlights ---------- */
+.ac-tilt { position: relative; transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .35s cubic-bezier(.2, .8, .2, 1), box-shadow .35s; will-change: transform; }
+.ac-tilt[data-tilt='on'] { transition: transform .08s linear, box-shadow .35s; box-shadow: 0 30px 50px rgba(var(--shadow-rgb), .22); }
+.ac-glare { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .3s; background: radial-gradient(circle at var(--gx, 50%) var(--gy, 50%), rgba(255, 255, 255, .6), rgba(255, 255, 255, 0) 55%); }
+.ac-tilt[data-tilt='on'] .ac-glare { opacity: 1; }
+
+.ac-card { transition: transform .45s var(--ease); }
+.ac-card:hover { transform: translateY(-6px); }
+
+.ac-btn-blue { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 10px 22px rgba(var(--shadow-rgb), .32); }
+.ac-btn-blue:active { box-shadow: inset 0 2px 6px rgba(0, 0, 0, .2), 0 2px 6px rgba(var(--shadow-rgb), .3); }
+
+.ac-spot-frame { transform: perspective(1300px) rotateY(calc((var(--p, .5) - .5) * -16deg)) rotateX(calc((var(--p, .5) - .5) * 5deg)); transition: transform .15s linear; }
+.ac-spot-flip .ac-spot-frame { transform: perspective(1300px) rotateY(calc((var(--p, .5) - .5) * 16deg)) rotateX(calc((var(--p, .5) - .5) * 5deg)); }
+
+.ac-tile { transform-style: preserve-3d; }
+.ac-tile-img { transform: translateZ(30px); }
+
+/* ---------- Motion between pages and while loading ---------- */
+.ac-route { animation: ac-route-in .55s cubic-bezier(.2, .8, .2, 1) backwards; }
+@keyframes ac-route-in { from { opacity: 0; translate: 0 14px; } to { opacity: 1; translate: 0 0; } }
+.ac-hero h1 .ac-line > span { animation-duration: 1.1s; }
+.ac-marq-track span { transition: color .3s, transform .3s var(--ease); }
+.ac-marq-track span:hover { color: var(--brand-ink); transform: translateY(-3px) scale(1.06); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ac-tilt, .ac-card, .ac-route { animation: none !important; transition: none !important; }
+  .ac-spot-frame, .ac-spot-flip .ac-spot-frame { transform: none; }
+}
+
+
+.ac-chat svg { color: var(--on-brand) !important; }
