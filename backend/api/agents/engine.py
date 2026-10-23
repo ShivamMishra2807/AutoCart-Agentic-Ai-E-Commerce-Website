@@ -909,72 +909,29 @@ class AgentEngine:
                 quantity=1,
                 user_email=customer_email or 'shopper@autocart.in'
             )
-            order_id = f"ord-ai-{uuid.uuid4().hex[:6]}"
-            order = Order.objects.create(
-                id=order_id,
-                customerName='Valued Customer',
-                customerEmail=customer_email or 'shopper@autocart.in',
-                customerPhone='+91 98200 12345',
-                date=datetime.now().strftime('%Y-%m-%d'),
-                totalAmount=quote['totalAmount'],
-                subtotal=quote['subtotal'],
-                tax=quote['tax'],
-                shippingFee=quote['deliveryFee'],
-                paymentMethod='Cash on Delivery',
-                paymentStatus='Pending',
-                status='Placed',
-                shippingAddress={
-                    'storeId': target_store['storeId'],
-                    'storeName': target_store['storeName'],
-                    'storeAddress': target_store['address'],
-                    'deliveryAddress': 'Customer Delivery Address, Mumbai',
-                    'city': target_store.get('city', 'Mumbai'),
-                    'pincode': target_store.get('pincode', '400053')
-                },
-                items=[{
-                    'id': target_prod['id'],
-                    'name': target_prod['name'],
-                    'price': target_prod['price'],
-                    'quantity': 1,
-                    'image': (target_prod.get('images') or [''])[0]
-                }]
-            )
-            store_model = Store.objects.filter(id=target_store['storeId']).first()
-            fulfillment = FulfillmentService.initiate_fulfillment(order, store=store_model)
-            if res_result.get('success'):
-                FulfillmentService.confirm_stock_reservation(res_result['reservationToken'])
-
-            tools_executed = ['generate_checkout_quote', 'create_stock_reservation', 'create_order', 'initiate_fulfillment']
+            tools_executed = ['generate_checkout_quote', 'create_stock_reservation']
             reply_text = (
-                f"🎉 **Order Placed & Allocated to Store!**\n\n"
-                f"• **Order ID**: `#{order.id}`\n"
-                f"• **Status**: Placed (Payment: Pending COD)\n"
+                f"🛒 **Ready to Order from {target_store['storeName']}!**\n\n"
+                f"• **Product**: **{target_prod['name']}**\n"
                 f"• **Fulfilling Store**: **{target_store['storeName']}**\n"
-                f"• **Product**: **{target_prod['name']}** (Qty: 1)\n"
-                f"• **Total Amount**: ₹{quote['totalAmount']:,.2f}\n"
-                f"• **Estimated Delivery**: **~{quote['estimatedMinutes']} mins**\n"
-                f"• **Tracking ID**: `{fulfillment.trackingNumber}`"
+                f"• **Item Price**: ₹{quote['subtotal']:,.2f}\n"
+                f"• **Delivery Estimate**: **~{quote['estimatedMinutes']} mins**\n"
+                f"• **Total Quote**: ₹{quote['totalAmount']:,.2f}\n\n"
+                f"I've added this to your cart! Please proceed to the **Cart / Checkout** page to select your delivery address and choose your payment method (UPI QR, Card, or Cash on Delivery)."
             )
             SessionMemoryManager.add_turn(session_key, query, reply_text, 'sathi', tools_executed)
             return {
                 'agent': 'sathi',
                 'status': 'success',
                 'reply': reply_text,
-                'orderAction': {
-                    'type': 'ORDER_CONFIRMED',
-                    'orderId': order.id,
+                'cartAction': {
+                    'type': 'ADD_TO_CART',
+                    'product': target_prod,
                     'store': target_store,
+                    'quantity': 1,
                     'quote': quote,
-                    'trackingNumber': fulfillment.trackingNumber
                 },
-                'orders': [{
-                    'id': order.id,
-                    'status': 'Placed',
-                    'date': order.date,
-                    'totalAmount': order.totalAmount,
-                    'paymentStatus': 'Pending',
-                    'items': order.items
-                }],
+                'suggestedActions': ['Go to Cart', 'Proceed to Checkout', 'Find something else'],
                 'products': [target_prod],
                 'nearbyStores': [target_store],
                 'toolsExecuted': tools_executed

@@ -72,14 +72,12 @@ export default function SupportChat({ isOpen, onClose }) {
   const say = (text, extra = {}) => setMessages((m) => [...m, { from: 'bot', text, at: clock(), ...extra }]);
 
   /** Start ordering from the chat. A signed-in customer with a past address gets a one-tap confirm; others go to checkout. */
-  const startBuy = async (card) => {
-    if (!user) { say('Please sign in with a customer account first, then I can place this order for you.'); setActions(['Sign in']); return; }
+  const startBuy = (card) => {
+    if (!user) { say('Please sign in with a customer account first, then I can add this to your cart.'); setActions(['Sign in']); return; }
     if (user.role !== 'CUSTOMER') { say('Seller and admin accounts cannot place orders. Sign out and use a customer account to buy.'); return; }
-    try {
-      const { data } = await api.get('/support/last-address');
-      if (!data.address) { if (addToCart({ id: card.id, name: card.name, price: card.price, originalPrice: card.originalPrice, rating: card.rating, stock: card.stock, images: card.image ? [card.image] : [] }, 1) === false) return; onClose(); navigate('/checkout'); return; }
-      setBuying({ card, qty: 1, address: data.address, saving: false, error: '' });
-    } catch { say('I could not start the order. Please try again, or use the cart.'); }
+    if (addToCart({ id: card.id, name: card.name, price: card.price, originalPrice: card.originalPrice, rating: card.rating, stock: card.stock, images: card.image ? [card.image] : [] }, 1) === false) return;
+    onClose();
+    navigate('/cart');
   };
   const confirmBuy = async () => {
     setBuying((b) => ({ ...b, saving: true, error: '' }));
@@ -121,6 +119,9 @@ export default function SupportChat({ isOpen, onClose }) {
         if (action.type === 'ADD_TO_CART' && action.product) {
           const p = action.product;
           addToCart({ id: p.id, name: p.name, price: p.price, originalPrice: p.originalPrice, rating: p.rating, stock: p.stock, images: p.image ? [p.image] : (p.images || []) }, action.quantity || 1);
+          onClose();
+          navigate('/cart');
+          return;
         } else if (action.type === 'UPDATE_QUANTITY' && action.productId) {
           updateQuantity(action.productId, action.quantity);
         } else if (action.type === 'REMOVE_FROM_CART' && action.productId) {
@@ -145,6 +146,8 @@ export default function SupportChat({ isOpen, onClose }) {
     if (label === 'Talk to a person') return openHandoff();
     if (label === 'See my tickets') { onClose(); return navigate('/support'); }
     if (label === 'Sign in') { onClose(); return navigate('/login'); }
+    if (label === 'Go to Cart' || label === 'Cart') { onClose(); return navigate('/cart'); }
+    if (label === 'Proceed to Checkout') { onClose(); return navigate('/checkout'); }
     return send(label);
   };
 

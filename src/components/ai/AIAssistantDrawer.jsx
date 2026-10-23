@@ -127,6 +127,12 @@ export const AIAssistantDrawer = ({ isOpen, onClose }) => {
       // Execute Cart and Store Actions returned by backend Agent tools
       if (res.cartAction?.type === 'ADD_TO_CART' && res.cartAction.product) {
         addToCart(res.cartAction.product, res.cartAction.quantity || 1);
+        if (res.cartAction.store) {
+          updateSelectedStore(res.cartAction.store);
+        }
+        onClose();
+        navigate('/cart');
+        return;
       }
       if (res.orderAction?.store) {
         updateSelectedStore(res.orderAction.store);
@@ -424,7 +430,19 @@ export const AIAssistantDrawer = ({ isOpen, onClose }) => {
                   {msg.actions.map((act) => (
                     <button
                       key={act}
-                      onClick={() => handleSend(null, act)}
+                      onClick={() => {
+                        if (act === 'Go to Cart' || act === 'View Cart' || act === 'Cart') {
+                          onClose();
+                          navigate('/cart');
+                          return;
+                        }
+                        if (act === 'Proceed to Checkout' || act === 'Checkout') {
+                          onClose();
+                          navigate('/checkout');
+                          return;
+                        }
+                        handleSend(null, act);
+                      }}
                       className="px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-indigo-50 hover:text-indigo-600 text-[10px] font-semibold text-gray-600 transition"
                     >
                       → {act}

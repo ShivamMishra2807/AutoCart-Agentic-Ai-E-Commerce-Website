@@ -152,14 +152,10 @@ class ShoppingAgentFixesTestCase(TestCase):
             session_id=self.session_id
         )
         self.assertEqual(order_res['status'], 'success')
-        self.assertIn('Order Placed', order_res['reply'])
-        order_action = order_res.get('orderAction')
-        self.assertIsNotNone(order_action)
-        new_order_id = order_action['orderId']
-
-        # Verify created order in database: status must be Placed and payment Pending!
-        created_order = Order.objects.get(id=new_order_id)
-        self.assertEqual(created_order.status, 'Placed')
-        self.assertEqual(created_order.paymentStatus, 'Pending')
-        self.assertEqual(created_order.paymentMethod, 'Cash on Delivery')
-        self.assertEqual(created_order.shippingAddress['storeName'], 'AutoCart Powai Store')
+        self.assertIn('Ready to Order', order_res['reply'])
+        cart_action = order_res.get('cartAction')
+        self.assertIsNotNone(cart_action)
+        self.assertEqual(cart_action['type'], 'ADD_TO_CART')
+        self.assertEqual(cart_action['product']['id'], self.kurta1.id)
+        self.assertEqual(cart_action['store']['storeId'], self.store_powai.id)
+        self.assertIn('quote', cart_action)
