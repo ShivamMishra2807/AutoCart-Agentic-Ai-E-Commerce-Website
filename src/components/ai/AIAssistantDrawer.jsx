@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Bot, Sparkles, X, Send, Search, Headphones, PackageSearch,
   RotateCcw, Tag, ShoppingBag, ShieldCheck, ChevronRight, BrainCircuit,
@@ -29,6 +30,7 @@ const engagementPrompts = [
 
 export const AIAssistantDrawer = ({ isOpen, onClose }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { cartItems, addToCart } = useCart();
   const { location, selectedStore, updateSelectedStore } = useLocation();
   const [mode, setMode] = useState('discovery');
@@ -308,6 +310,26 @@ export const AIAssistantDrawer = ({ isOpen, onClose }) => {
                       Delivery ETA: <strong className="text-emerald-300">~{msg.orderAction.estimatedMinutes} mins</strong> • Tracking: <span className="font-mono text-indigo-300">{msg.orderAction.trackingNumber}</span>
                     </p>
                   </div>
+                  <div className="flex items-center gap-2 pt-1.5 border-t border-white/10">
+                    <button
+                      onClick={() => {
+                        onClose();
+                        navigate(`/orders/${msg.orderAction.orderId}`);
+                      }}
+                      className="flex-1 py-1.5 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-[11px] transition text-center shadow-xs"
+                    >
+                      Choose Payment / Pay with UPI
+                    </button>
+                    <button
+                      onClick={() => {
+                        onClose();
+                        navigate('/checkout');
+                      }}
+                      className="py-1.5 px-3 rounded-xl bg-white/15 hover:bg-white/25 text-white font-medium text-[11px] transition text-center"
+                    >
+                      Checkout Page
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -352,11 +374,16 @@ export const AIAssistantDrawer = ({ isOpen, onClose }) => {
                           <button
                             onClick={() => {
                               updateSelectedStore(st);
-                              handleSend(null, "Order from this store");
+                              if (msg.products?.[0]) {
+                                addToCart(msg.products[0], 1);
+                              }
+                              onClose();
+                              navigate('/checkout');
                             }}
-                            title="Order from this store"
-                            className="p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-600 text-indigo-600 hover:text-white transition"
+                            title="Choose payment and checkout from this store"
+                            className="px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] transition flex items-center gap-1 shadow-xs"
                           >
+                            <span>Pay / Order</span>
                             <ArrowRight className="w-3.5 h-3.5" />
                           </button>
                         </div>
