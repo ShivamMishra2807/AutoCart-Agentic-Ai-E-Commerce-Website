@@ -2,7 +2,7 @@ services:
   - type: web
     name: autocart-backend
     runtime: python
-    buildCommand: "./build.sh"
+    buildCommand: "bash ./build.sh"
     startCommand: "gunicorn --chdir backend autocart_core.wsgi:application --bind 0.0.0.0:$PORT"
     healthCheckPath: /health/
     envVars:
