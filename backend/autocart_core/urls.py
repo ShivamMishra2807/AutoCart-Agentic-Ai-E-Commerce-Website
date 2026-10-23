@@ -4,7 +4,13 @@ from django.http import JsonResponse
 
 
 def health_check(request):
-    return JsonResponse({"status": "ok"})
+    ocr_status = "ok"
+    try:
+        from rapidocr_onnxruntime import RapidOCR
+        RapidOCR()
+    except Exception as e:
+        ocr_status = f"unavailable: {e}"
+    return JsonResponse({"status": "ok", "ocr": ocr_status})
 
 
 urlpatterns = [

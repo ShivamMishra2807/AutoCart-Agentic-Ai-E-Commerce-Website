@@ -21,6 +21,9 @@ COPY backend/requirements.txt /app/backend/
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r /app/backend/requirements.txt
 
+# Pre-verify RapidOCR loads without error and pre-warm models
+RUN python -c "from rapidocr_onnxruntime import RapidOCR; RapidOCR()"
+
 # Copy backend application source code
 COPY backend/ /app/backend/
 COPY build.sh /app/
