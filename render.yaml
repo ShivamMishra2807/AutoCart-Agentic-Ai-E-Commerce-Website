@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: autocart-backend
+    runtime: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn --chdir backend autocart_core.wsgi:application --bind 0.0.0.0:$PORT"
+    healthCheckPath: /health/
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: DEBUG
+        value: "False"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: AUTOCART_DISABLE_EMBEDDINGS
+        value: "0"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: autocart-db
+          property: connectionString
+
+databases:
+  - name: autocart-db
+    databaseName: autocart
+    user: autocart
+    plan: free

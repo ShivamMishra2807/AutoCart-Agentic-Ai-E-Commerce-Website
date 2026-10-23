@@ -10,7 +10,73 @@ Everything runs on free tools. **There is no payment gateway**: customers pay on
 
 ---
 
-## Run it (Windows, macOS or Linux)
+## Production Deployment Guide
+
+AutoCart is production-configured for:
+- **Backend:** [Render](https://render.com) (Python Web Service + Managed PostgreSQL)
+- **Frontend:** [Vercel](https://vercel.com) (Vite SPA with rewrites)
+
+### 1. Backend on Render
+
+#### Option A: One-Click Render Blueprint
+1. Go to [Render Dashboard](https://dashboard.render.com/) and click **New +** -> **Blueprint**.
+2. Connect your GitHub repository (`AutoCart-Agentic-Ai-E-Commerce-Website`).
+3. Render reads `render.yaml` and provisions:
+   - A free managed **PostgreSQL** database (`autocart-db`).
+   - A **Web Service** (`autocart-backend`) running Gunicorn and WhiteNoise.
+4. Set optional secret environment variables in the Render Dashboard:
+   - `GEMINI_API_KEY`: Your Gemini API key from Google AI Studio.
+   - `GROQ_API_KEY`: Optional Groq API key for Llama 3.3.
+5. Deploy. Render runs `build.sh` (collects static files, runs migrations).
+6. Note your backend URL (e.g., `https://autocart-backend.onrender.com`). Verify health at `/health/`.
+
+#### Option B: Manual Render Service Setup
+1. Create a **PostgreSQL Database** on Render: Name: `autocart-db`. Copy its **Internal Database URL**.
+2. Create a **Web Service**:
+   - **Repository:** AutoCart GitHub repository
+   - **Environment:** `Python`
+   - **Build Command:** `./build.sh` (or `pip install -r backend/requirements.txt && python backend/manage.py collectstatic --no-input && python backend/manage.py migrate`)
+   - **Start Command:** `gunicorn --chdir backend autocart_core.wsgi:application --bind 0.0.0.0:$PORT`
+   - **Health Check Path:** `/health/`
+3. Add Environment Variables:
+   - `DEBUG`: `False`
+   - `SECRET_KEY`: (Generate secure key or let Render generate)
+   - `DATABASE_URL`: (Paste your Render PostgreSQL connection string)
+   - `ALLOWED_HOSTS`: `localhost,127.0.0.1,.onrender.com,.vercel.app`
+   - `CORS_ALLOWED_ORIGINS`: `https://<your-vercel-site>.vercel.app`
+   - `CSRF_TRUSTED_ORIGINS`: `https://<your-vercel-site>.vercel.app,https://<your-render-backend>.onrender.com`
+   - `GEMINI_API_KEY`: (optional)
+   - `AUTOCART_DISABLE_EMBEDDINGS`: `0` (or `1` if running on very low memory plan)
+
+#### Seeding Initial Production Data
+In the Render Web Service shell (or via local connection to the Postgres database):
+```bash
+python backend/seed_db.py
+python backend/seed_mumbai_network.py
+python backend/seed_300_products.py
+python backend/seed_demo_seller.py
+```
+*(All seed scripts use `update_or_create` and are idempotent - safe to rerun without creating duplicates).*
+
+---
+
+### 2. Frontend on Vercel
+
+1. Go to [Vercel Dashboard](https://vercel.com/dashboard) and click **Add New...** -> **Project**.
+2. Import your GitHub repository (`AutoCart-Agentic-Ai-E-Commerce-Website`).
+3. Project Settings:
+   - **Framework Preset:** `Vite`
+   - **Root Directory:** `./` (Repository root)
+   - **Build Command:** `npm run build`
+   - **Output Directory:** `dist`
+4. Add Environment Variable:
+   - **`VITE_API_BASE_URL`**: `https://<your-backend-name>.onrender.com/api`
+     *(Ensure there is NO trailing slash after `/api`)*
+5. Click **Deploy**. Vercel will build the frontend and serve it with the included `vercel.json` SPA rewrite rules.
+
+---
+
+## Local Development (Windows, macOS or Linux)
 
 You need **Python 3.12+** and **Node 20+**.
 
@@ -31,7 +97,7 @@ Never commit `.env`. It is in `.gitignore`.
 cd backend
 python -m venv .venv
 .venv\Scripts\activate          # macOS/Linux: source .venv/bin/activate
-pip install -r requirements.txt     # includes langgraph and fastembed; the first chat downloads a ~130 MB embedding model once
+pip install -r requirements.txt     # includes gunicorn, whitenoise, dj-database-url, langgraph and fastembed
 python manage.py migrate
 python seed_db.py
 python seed_more_products.py
@@ -66,7 +132,7 @@ Change these before putting the site anywhere public. To try **Pay now with UPI*
 
 ```bash
 cd backend
-python manage.py test        # 163 tests; the AI model is switched off so tests never use the network
+python manage.py test        # 285 tests; the AI model is switched off so tests never use the network
 npm run build                # frontend production build
 ```
 
@@ -123,8 +189,6 @@ npm run build                # frontend production build
 | Live GPS tracking of a delivery rider | The map shows the road route and distance from store to customer, not a moving rider. The route comes from the free public OSRM service and can be unavailable (a straight line is drawn then). |
 | Seller order updates beyond "Packed" (shipped, delivered) | Planned. |
 | Personalised "picked for you", fraud detection, photo reviews | Planned. |
-| LangChain chains and hosted Hugging Face inference | The agent uses LangGraph with langchain-core. The Hugging Face model runs locally; hosted inference needs your own token and is not used. |
-| PostgreSQL, Redis, Docker | The app runs on SQLite for now. |
 | Legal pages (terms, privacy, refund policy) | Missing. |
 | Real Gmail sending | Built, but needs your own app password in `.env`. Not tested with real credentials. |
 

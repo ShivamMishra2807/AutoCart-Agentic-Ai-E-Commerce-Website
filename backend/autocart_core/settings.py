@@ -11,23 +11,48 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 def load_root_env():
-    """Read KEY=value lines from the project's .env so email settings work without exporting variables."""
-    env = BASE_DIR.parent / '.env'
-    if env.exists():
-        for raw in env.read_text(encoding='utf-8').splitlines():
-            line = raw.strip()
-            if line and not line.startswith('#') and '=' in line:
-                key, val = line.split('=', 1)
-                os.environ.setdefault(key.strip(), val.strip().strip('"').strip("'"))
+    """Load environment variables from .env in project root or backend folder."""
+    try:
+        from dotenv import load_dotenv
+        for p in (BASE_DIR / '.env', BASE_DIR.parent / '.env'):
+            if p.exists():
+                load_dotenv(p)
+    except Exception:
+        pass
+
+    for env_file in (BASE_DIR / '.env', BASE_DIR.parent / '.env'):
+        if env_file.exists():
+            try:
+                for raw in env_file.read_text(encoding='utf-8').splitlines():
+                    line = raw.strip()
+                    if line and not line.startswith('#') and '=' in line:
+                        key, val = line.split('=', 1)
+                        os.environ.setdefault(key.strip(), val.strip().strip('"').strip("'"))
+            except Exception:
+                pass
 
 
 load_root_env()
 
-SECRET_KEY = 'django-insecure-9*$7dp_u$3#=8q1-vq(mtlx-v65krjy&a^k%*3j51rb4b@3jv_'
+SECRET_KEY = os.getenv(
+    'SECRET_KEY',
+    'django-insecure-9*$7dp_u$3#=8q1-vq(mtlx-v65krjy&a^k%*3j51rb4b@3jv_'
+)
 
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 'yes')
+if os.getenv('RENDER') or os.getenv('ENVIRONMENT') == 'production':
+    if 'DEBUG' not in os.environ:
+        DEBUG = False
 
-ALLOWED_HOSTS = ['*']
+# Allowed hosts configuration
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.onrender.com', '.vercel.app', '*']
+render_host = os.getenv('RENDER_EXTERNAL_HOSTNAME')
+if render_host:
+    ALLOWED_HOSTS.append(render_host)
+allowed_hosts_env = os.getenv('ALLOWED_HOSTS', '')
+if allowed_hosts_env:
+    ALLOWED_HOSTS.extend([h.strip() for h in allowed_hosts_env.split(',') if h.strip()])
+ALLOWED_HOSTS = list(dict.fromkeys(ALLOWED_HOSTS))
 
 # Application definition
 INSTALLED_APPS = [
@@ -49,6 +74,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -76,12 +102,29 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'autocart_core.wsgi.application'
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# Database configuration: prefers managed PostgreSQL if DATABASE_URL provided, else SQLite
+try:
+    import dj_database_url
+except ImportError:
+    dj_database_url = None
+
+DATABASE_URL = os.getenv('DATABASE_URL')
+if DATABASE_URL and dj_database_url:
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            conn_health_checks=True,
+            ssl_require=False if DATABASE_URL.startswith('sqlite') else True,
+        )
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 AUTH_USER_MODEL = 'api.User'
 
@@ -105,22 +148,51 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = 'static/'
+# Static files (CSS, JavaScript, Images)
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Seller documents live here. Never served directly; only through permission-checked views.
 MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_URL = '/media/'
 
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS Configuration
+cors_env = os.getenv('CORS_ALLOWED_ORIGINS', '')
+if cors_env:
+    CORS_ALLOWED_ORIGINS = [o.strip() for o in cors_env.split(',') if o.strip()]
+    CORS_ALLOW_ALL_ORIGINS = False
+else:
+    CORS_ALLOW_ALL_ORIGINS = True
+    CORS_ALLOWED_ORIGINS = [
+        'http://localhost:5173',
+        'http://127.0.0.1:5173',
+        'http://localhost:5174',
+        'http://127.0.0.1:5174',
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+    ]
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'http://localhost:5174',
-    'http://127.0.0.1:5174',
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-]
+
+# CSRF Trusted Origins
+csrf_env = os.getenv('CSRF_TRUSTED_ORIGINS', '')
+if csrf_env:
+    CSRF_TRUSTED_ORIGINS = [o.strip() for o in csrf_env.split(',') if o.strip()]
+else:
+    CSRF_TRUSTED_ORIGINS = [
+        'https://*.onrender.com',
+        'https://*.vercel.app',
+        'http://localhost:5173',
+        'http://localhost:5174',
+        'http://127.0.0.1:5173',
+        'http://127.0.0.1:5174',
+    ]
+
+# Security enhancements for production
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [

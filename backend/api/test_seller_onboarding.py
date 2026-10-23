@@ -471,11 +471,12 @@ class SellerOnboardingTests(TestCase):
         )
         parsed = parse_aadhaar(raw_with_disclaimers)
         self.assertEqual(parsed['aadhaarLast4'], '4821')
-        self.assertIn('12 Hill Road', parsed['address'])
-        self.assertNotIn('citizenship', parsed['address'].lower())
-        self.assertNotIn('uidai.gov.in', parsed['address'].lower())
-        self.assertNotIn('1947', parsed['address'])
-        self.assertNotIn('help@', parsed['address'].lower())
+        addr = parsed.get('residentialAddress') or parsed.get('address') or ''
+        self.assertIn('12 Hill Road', addr)
+        self.assertNotIn('citizenship', addr.lower())
+        self.assertNotIn('uidai.gov.in', addr.lower())
+        self.assertNotIn('1947', addr)
+        self.assertNotIn('help@', addr.lower())
 
     def test_wrong_document_type_rejection(self):
         """Uploading PAN under AADHAAR docType is detected and rejected."""
